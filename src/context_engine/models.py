@@ -16,6 +16,21 @@ def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+class DomainFilterMode(str, Enum):
+    """How the optional domain hint affects candidate selection."""
+
+    HINT = "hint"
+    RESTRICT = "restrict"
+
+
+class ResolveStatus(str, Enum):
+    """Outcome when no candidates qualify, or when results are returned."""
+
+    MATCHED = "matched"
+    NO_MATCH = "no_match"
+    DOMAIN_EMPTY = "domain_empty"
+
+
 class ContextBudget(BaseModel):
     """Optional limits the adapter can pass so the engine can trim results."""
 
@@ -44,6 +59,14 @@ class ResolveRequest(BaseModel):
         default=None,
         description="Business or technical domain hint (e.g. payments, infrastructure).",
     )
+    domain_filter: DomainFilterMode = Field(
+        default=DomainFilterMode.HINT,
+        description="hint: boost domain matches; restrict: only items in that domain.",
+    )
+    include_content: bool = Field(
+        default=True,
+        description="When true, resolve loads and returns markdown content per candidate.",
+    )
     recent_event: str | None = Field(
         default=None,
         description="Latest discovery, error, or tool result that may change relevance.",
@@ -55,16 +78,29 @@ class ResolveRequest(BaseModel):
 class RankedCandidate(BaseModel):
     """A catalog item ranked for potential delivery."""
 
-    item_id: str
+    item_id: str = Field(description="Stable source id from the knowledge catalog.")
     version: str
     score: float = Field(ge=0.0, le=1.0)
-    reasons: list[str] = Field(default_factory=list)
+    reasons: list[str] = Field(
+        default_factory=list,
+        description="Human-readable, deterministic relevance explanations.",
+    )
     summary: str | None = None
+    content: str | None = Field(
+        default=None,
+        description="Full markdown body when include_content is true and the file exists.",
+    )
 
 
 class ResolveResponse(BaseModel):
     session_id: str
-    candidates: list[RankedCandidate]
+    status: ResolveStatus = ResolveStatus.MATCHED
+    message: str | None = Field(
+        default=None,
+        description="Set when status is not matched (e.g. no relevant knowledge).",
+    )
+    candidates: list[RankedCandidate] = Field(default_factory=list)
+    catalog_version: str | None = None
     resolved_at: datetime = Field(default_factory=utc_now)
 
 
