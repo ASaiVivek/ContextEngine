@@ -128,12 +128,51 @@ class GetResponse(BaseModel):
     retrieved_at: datetime = Field(default_factory=utc_now)
 
 
+class LifecycleStage(str, Enum):
+    """Stages the engine can observe directly or via host signals."""
+
+    SELECTED = "selected"
+    RETURNED = "returned"
+    REPORTED_USED = "reported_used"
+
+
+class LifecycleRecordOutcome(str, Enum):
+    RECORDED = "recorded"
+    DUPLICATE_SKIPPED = "duplicate_skipped"
+
+
 class UsageOutcome(str, Enum):
+    """Legacy and host-feedback outcomes (not engine lifecycle stages)."""
+
     DELIVERED = "delivered"
     SKIPPED_DUPLICATE = "skipped_duplicate"
     REJECTED_BUDGET = "rejected_budget"
     AGENT_FEEDBACK_POSITIVE = "agent_feedback_positive"
     AGENT_FEEDBACK_NEGATIVE = "agent_feedback_negative"
+
+
+class ContextLifecycleEvent(BaseModel):
+    session_id: str
+    item_id: str
+    version: str
+    stage: LifecycleStage
+    detail: str | None = None
+    recorded_at: datetime = Field(default_factory=utc_now)
+
+
+class RecordLifecycleRequest(BaseModel):
+    events: list[ContextLifecycleEvent] = Field(min_length=1)
+
+
+class LifecycleRecordResult(BaseModel):
+    event: ContextLifecycleEvent
+    outcome: LifecycleRecordOutcome
+    message: str | None = None
+
+
+class RecordLifecycleResponse(BaseModel):
+    session_id: str
+    results: list[LifecycleRecordResult] = Field(default_factory=list)
 
 
 class UsageEvent(BaseModel):
@@ -152,13 +191,44 @@ class RecordUsageRequest(BaseModel):
 class LedgerEntry(BaseModel):
     item_id: str
     version: str
-    first_delivered_at: datetime
-    last_delivered_at: datetime
-    delivery_count: int = 1
-    outcomes: list[UsageOutcome] = Field(default_factory=list)
+    selected_count: int = 0
+    returned_count: int = 0
+    reported_used_count: int = 0
+    duplicate_select_skips: int = 0
+    duplicate_return_skips: int = 0
+    first_selected_at: datetime | None = None
+    last_selected_at: datetime | None = None
+    first_returned_at: datetime | None = None
+    last_returned_at: datetime | None = None
+    first_reported_used_at: datetime | None = None
+    last_reported_used_at: datetime | None = None
+    superseded: bool = False
+    superseded_by_version: str | None = None
+    superseded_at: datetime | None = None
+    agent_feedback: list[UsageOutcome] = Field(default_factory=list)
+
+
+class LifecycleTotals(BaseModel):
+    selected: int = 0
+    returned: int = 0
+    reported_used: int = 0
+    duplicate_select_skips: int = 0
+    duplicate_return_skips: int = 0
 
 
 class ContextEngineStatus(BaseModel):
     session_id: str
     entries: list[LedgerEntry] = Field(default_factory=list)
-    total_deliveries: int = 0
+    totals: LifecycleTotals = Field(default_factory=LifecycleTotals)
+    observation_scope: str = Field(
+        default=(
+            "Returned counts reflect engine/API delivery only. "
+            "Reported-used and feedback require explicit host signals; "
+            "the engine does not read the agent context window."
+        ),
+    )
+
+    @property
+    def total_deliveries(self) -> int:
+        """Legacy alias for returned item count."""
+        return self.totals.returned

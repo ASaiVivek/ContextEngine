@@ -13,9 +13,13 @@ from context_engine.controller import ContextController
 from context_engine.ledger import ContextLedger
 from context_engine.models import (
     ContextEngineStatus,
+    ContextLifecycleEvent,
     GetRequest,
     GetResponse,
     KnowledgeItem,
+    LifecycleStage,
+    RecordLifecycleRequest,
+    RecordLifecycleResponse,
     RecordUsageRequest,
     ResolveRequest,
     ResolveResponse,
@@ -41,7 +45,18 @@ class ContextEngine:
 
     def resolve(self, request: ResolveRequest) -> ResolveResponse:
         """Find relevant knowledge candidates."""
-        return self._controller.plan_resolve(request)
+        response = self._controller.plan_resolve(request)
+        for candidate in response.candidates:
+            self._ledger.record_lifecycle(
+                ContextLifecycleEvent(
+                    session_id=request.session_id,
+                    item_id=candidate.item_id,
+                    version=candidate.version,
+                    stage=LifecycleStage.SELECTED,
+                    detail="resolve",
+                )
+            )
+        return response
 
     def get(self, request: GetRequest) -> GetResponse:
         """Retrieve selected knowledge items."""
@@ -64,10 +79,27 @@ class ContextEngine:
                     content_path=str(self._knowledge_root / ref.path),
                 )
             )
+            self._ledger.record_lifecycle(
+                ContextLifecycleEvent(
+                    session_id=request.session_id,
+                    item_id=ref.id,
+                    version=ref.version,
+                    stage=LifecycleStage.RETURNED,
+                    detail="get",
+                )
+            )
         return GetResponse(session_id=request.session_id, items=items)
 
+    def record_lifecycle(self, request: RecordLifecycleRequest) -> RecordLifecycleResponse:
+        """Record lifecycle events (e.g. host-reported usage)."""
+        results = [
+            self._ledger.record_lifecycle(event) for event in request.events
+        ]
+        session_id = request.events[0].session_id
+        return RecordLifecycleResponse(session_id=session_id, results=results)
+
     def record_usage(self, request: RecordUsageRequest) -> None:
-        """Record delivery and optional usage feedback."""
+        """Record legacy delivery events and host feedback."""
         for event in request.events:
             self._ledger.record(event)
 
@@ -80,7 +112,7 @@ class ContextEngine:
         session_id: str,
         candidates: list,
     ) -> list:
-        """Helper for adapters: drop items already delivered in this session."""
+        """Drop candidates already returned to the host in this session."""
         from context_engine.models import RankedCandidate
 
         result: list[RankedCandidate] = []
