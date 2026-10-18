@@ -1,0 +1,24 @@
+# Versioned catalog of markdown knowledge sources.
+# Paths are relative to the knowledge/ directory.
+version: "1"
+items:
+  - id: payments/retry-policy
+    path: payments/retry-policy.md
+    version: "1.0.0"
+    domain: payments
+    tags: [retry, resilience, api]
+    summary: Exponential backoff and retry limits for payment API calls.
+
+  - id: payments/idempotency
+    path: payments/idempotency.md
+    version: "1.0.0"
+    domain: payments
+    tags: [idempotency, api, safety]
+    summary: Idempotency keys and safe retry semantics for payment operations.
+
+  - id: infrastructure/ecs-deployment
+    path: infrastructure/ecs-deployment.md
+    version: "1.0.0"
+    domain: infrastructure
+    tags: [ecs, deployment, aws]
+    summary: ECS service deployment checklist and rollout constraints.
