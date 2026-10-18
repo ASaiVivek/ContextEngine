@@ -4,6 +4,7 @@ from context_engine.api import ContextEngine
 from context_engine.models import (
     ContextBudget,
     ContextEngineStatus,
+    DomainFilterMode,
     GetRequest,
     GetResponse,
     KnowledgeItem,
@@ -11,6 +12,7 @@ from context_engine.models import (
     RecordUsageRequest,
     ResolveRequest,
     ResolveResponse,
+    ResolveStatus,
     UsageEvent,
 )
 
@@ -18,6 +20,7 @@ __all__ = [
     "ContextBudget",
     "ContextEngine",
     "ContextEngineStatus",
+    "DomainFilterMode",
     "GetRequest",
     "GetResponse",
     "KnowledgeItem",
@@ -25,6 +28,7 @@ __all__ = [
     "RecordUsageRequest",
     "ResolveRequest",
     "ResolveResponse",
+    "ResolveStatus",
     "UsageEvent",
 ]
 

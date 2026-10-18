@@ -33,7 +33,7 @@ class ContextEngine:
         self._knowledge_root = knowledge_root or default_knowledge_root()
         self._catalog = load_catalog(self._knowledge_root)
         self._ledger = ledger or ContextLedger()
-        self._controller = ContextController(self._catalog)
+        self._controller = ContextController(self._catalog, self._knowledge_root)
 
     @property
     def knowledge_root(self) -> Path:
