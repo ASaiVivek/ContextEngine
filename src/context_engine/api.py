@@ -61,9 +61,11 @@ class ContextEngine:
     def get(self, request: GetRequest) -> GetResponse:
         """Retrieve selected knowledge items."""
         items: list[KnowledgeItem] = []
+        missing_item_ids: list[str] = []
         for item_id in request.item_ids:
             ref = self._catalog.get(item_id)
             if ref is None:
+                missing_item_ids.append(item_id)
                 continue
             content = None
             if request.include_content:
@@ -88,7 +90,11 @@ class ContextEngine:
                     detail="get",
                 )
             )
-        return GetResponse(session_id=request.session_id, items=items)
+        return GetResponse(
+            session_id=request.session_id,
+            items=items,
+            missing_item_ids=missing_item_ids,
+        )
 
     def record_lifecycle(self, request: RecordLifecycleRequest) -> RecordLifecycleResponse:
         """Record lifecycle events (e.g. host-reported usage)."""

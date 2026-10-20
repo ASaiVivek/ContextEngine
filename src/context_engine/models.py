@@ -125,6 +125,10 @@ class KnowledgeItem(BaseModel):
 class GetResponse(BaseModel):
     session_id: str
     items: list[KnowledgeItem]
+    missing_item_ids: list[str] = Field(
+        default_factory=list,
+        description="Requested ids that are not in the catalog. Not an agent-context signal.",
+    )
     retrieved_at: datetime = Field(default_factory=utc_now)
 
 
