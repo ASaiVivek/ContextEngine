@@ -1,5 +1,9 @@
 # Phase A — Validate integration
 
+Protocol coverage is done on the current branch: the stdio server exposes `resolve_context`, `get_context`, `get_session_status`, and `record_context_usage`, and the official MCP client tests keep session ledger behavior across repeated calls (`pytest`, 30 passing).
+
+This checklist is the remaining milestone: one real coding agent, not only the SDK client.
+
 ## Development environment (this repo)
 
 | Item | Value |
@@ -19,7 +23,7 @@ pytest
 ### Run the MCP server (stdio)
 
 ```bash
-python3 -m context_engine.adapters.mcp.server
+python3 -m context_engine.adapters.mcp
 # or after install:
 context-engine-mcp
 ```
